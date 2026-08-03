@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>QR Beacon — Send</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --bg:#0A0D12;
+    --surface:#131822;
+    --surface-2:#1B222E;
+    --line:#232B38;
+    --cyan:#37E6C4;
+    --amber:#FFB454;
+    --text:#E8ECF1;
+    --muted:#7C8798;
+    --danger:#FF6B6B;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'IBM Plex Mono',monospace;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:20px 16px 48px;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:22px;
+    font-weight:700;
+    letter-spacing:0.02em;
+    margin:4px 0 2px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .dot-live{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--cyan);
+    box-shadow:0 0 8px var(--cyan);
+    animation:pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1;transform:scale(1);}
+    50%{opacity:.4;transform:scale(0.7);}
+  }
+  .subtitle{color:var(--muted);font-size:13px;margin-bottom:24px;text-align:center;max-width:340px;line-height:1.5;}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:20px;
+    width:100%;
+    max-width:400px;
+    margin-bottom:16px;
+  }
+
+  .drop{
+    border:1.5px dashed var(--line);
+    border-radius:10px;
+    padding:28px 16px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .drop:hover, .drop.hover{
+    border-color:var(--cyan);
+    background:rgba(55,230,196,0.05);
+  }
+  .drop .icon{font-size:26px;margin-bottom:8px;display:block;}
+  .drop .label{font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:14px;}
+  .drop .hint{color:var(--muted);font-size:11.5px;margin-top:4px;}
+  input[type=file]{display:none;}
+
+  .meta{
+    display:none;
+    font-size:12.5px;
+    color:var(--muted);
+    margin-top:14px;
+    line-height:1.9;
+  }
+  .meta b{color:var(--text);font-weight:600;}
+  .meta .row{display:flex;justify-content:space-between;}
+
+  .stage{
+    display:none;
+    width:100%;
+    max-width:400px;
+    align-items:center;
+    flex-direction:column;
+  }
+
+  .beacon-frame{
+    position:relative;
+    width:320px;
+    height:320px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin:8px 0 18px;
+  }
+  .ring{
+    position:absolute;
+    inset:0;
+    border-radius:20px;
+    border:1.5px solid rgba(55,230,196,0.35);
+  }
+  .ring.animate{
+    animation:ringPulse 1.4s ease-out infinite;
+  }
+  @keyframes ringPulse{
+    0%{transform:scale(0.94);opacity:0.9;}
+    70%{transform:scale(1.06);opacity:0;}
+    100%{transform:scale(1.06);opacity:0;}
+  }
+  #qrbox{
+    background:#fff;
+    padding:14px;
+    border-radius:12px;
+    position:relative;
+    z-index:2;
+    box-shadow:0 0 0 1px var(--line), 0 12px 28px rgba(0,0,0,0.45);
+  }
+  #qrbox img, #qrbox canvas{
+    display:block;
+    width:280px !important;
+    height:280px !important;
+  }
+
+  .frame-counter{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:15px;
+    font-weight:700;
+    letter-spacing:0.03em;
+    margin-bottom:2px;
+  }
+  .frame-counter span{color:var(--cyan);}
+  .chunk-id{color:var(--muted);font-size:11px;margin-bottom:16px;}
+
+  .controls{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:18px;
+  }
+  button{
+    font-family:'IBM Plex Mono',monospace;
+    border:1px solid var(--line);
+    background:var(--surface-2);
+    color:var(--text);
+    border-radius:8px;
+    padding:10px 14px;
+    font-size:13px;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  button:hover{border-color:var(--cyan);}
+  button.primary{
+    background:var(--cyan);
+    color:#06110E;
+    border-color:var(--cyan);
+    font-weight:600;
+  }
+  button.primary:hover{opacity:0.9;}
+  button:disabled{opacity:0.35;cursor:not-allowed;}
+  button.icon-btn{padding:10px 13px;font-size:15px;}
+
+  .slider-row{
+    width:100%;
+    max-width:400px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px 18px;
+    display:none;
+  }
+  .slider-label{
+    display:flex;
+    justify-content:space-between;
+    font-size:12px;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  .slider-label b{color:var(--text);}
+  input[type=range]{
+    width:100%;
+    accent-color:var(--cyan);
+  }
+  .slider-two{display:flex;gap:14px;margin-top:14px;}
+  .slider-two > div{flex:1;}
+
+  .toggle-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-top:14px;
+    font-size:12.5px;
+    color:var(--muted);
+  }
+  .switch{
+    position:relative;
+    width:38px;height:22px;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    cursor:pointer;
+  }
+  .switch::after{
+    content:'';
+    position:absolute;
+    top:2px;left:2px;
+    width:16px;height:16px;
+    background:var(--muted);
+    border-radius:50%;
+    transition:transform .15s ease, background .15s ease;
+  }
+  .switch.on{border-color:var(--cyan);}
+  .switch.on::after{
+    transform:translateX(16px);
+    background:var(--cyan);
+  }
+
+  .footer-note{
+    color:var(--muted);
+    font-size:11px;
+    text-align:center;
+    max-width:340px;
+    margin-top:22px;
+    line-height:1.6;
+  }
+  .footer-note a{color:var(--cyan);}
+
+  .reset-link{
+    margin-top:14px;
+    color:var(--muted);
+    font-size:12px;
+    text-decoration:underline;
+    cursor:pointer;
+    background:none;
+    border:none;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .reset-link:hover{color:var(--text);}
+</style>
+</head>
+<body>
+
+  <h1><span class="dot-live"></span> QR Beacon</h1>
+  <div class="subtitle">Turn a file into a stream of QR codes. Point the receiver page's camera at this screen to pull it across.</div>
+
+  <div class="card" id="uploadCard">
+    <label class="drop" id="dropZone">
+      <span class="icon">📄</span>
+      <span class="label">Tap to choose a file</span>
+      <span class="hint">Best for text-based files — .html, .js, .css, .json, .txt</span>
+      <input type="file" id="fileInput">
+    </label>
+    <div class="meta" id="meta">
+      <div class="row"><span>File</span><b id="metaName">—</b></div>
+      <div class="row"><span>Size</span><b id="metaSize">—</b></div>
+      <div class="row"><span>Chunks</span><b id="metaChunks">—</b></div>
+      <div class="row"><span>Transfer ID</span><b id="metaId">—</b></div>
+    </div>
+  </div>
+
+  <div class="slider-row" id="sliderRow">
+    <div class="slider-two">
+      <div>
+        <div class="slider-label"><span>Chunk size</span><b id="chunkSizeLabel">200</b></div>
+        <input type="range" id="chunkSize" min="80" max="800" step="20" value="200">
+      </div>
+      <div>
+        <div class="slider-label"><span>Speed (ms/frame)</span><b id="speedLabel">600</b></div>
+        <input type="range" id="speed" min="150" max="1500" step="50" value="600">
+      </div>
+    </div>
+    <div class="toggle-row">
+      <span>Loop continuously</span>
+      <div class="switch on" id="loopToggle"></div>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="beacon-frame">
+      <div class="ring animate" id="ring1"></div>
+      <div id="qrbox"></div>
+    </div>
+    <div class="frame-counter">Frame <span id="curFrame">1</span> / <span id="totFrame">1</span></div>
+    <div class="chunk-id" id="chunkIdLine">id: —</div>
+    <div class="controls">
+      <button class="icon-btn" id="prevBtn">⟵</button>
+      <button class="primary" id="playBtn">Pause</button>
+      <button class="icon-btn" id="nextBtn">⟶</button>
+    </div>
+    <button class="reset-link" id="resetBtn">choose a different file</button>
+  </div>
+
+  <div class="footer-note">Keep the receiving phone's camera steady and let it play through — missed frames just come back around on the next loop.</div>
+
+<script>
+(function(){
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const meta = document.getElementById('meta');
+  const metaName = document.getElementById('metaName');
+  const metaSize = document.getElementById('metaSize');
+  const metaChunks = document.getElementById('metaChunks');
+  const metaId = document.getElementById('metaId');
+  const sliderRow = document.getElementById('sliderRow');
+  const chunkSizeInput = document.getElementById('chunkSize');
+  const chunkSizeLabel = document.getElementById('chunkSizeLabel');
+  const speedInput = document.getElementById('speed');
+  const speedLabel = document.getElementById('speedLabel');
+  const loopToggle = document.getElementById('loopToggle');
+  const stage = document.getElementById('stage');
+  const qrbox = document.getElementById('qrbox');
+  const curFrame = document.getElementById('curFrame');
+  const totFrame = document.getElementById('totFrame');
+  const chunkIdLine = document.getElementById('chunkIdLine');
+  const playBtn = document.getElementById('playBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  let rawText = null;
+  let fileName = '';
+  let transferId = '';
+  let chunks = [];
+  let idx = 0;
+  let playing = true;
+  let timer = null;
+  let qr = null;
+
+  function utf8ToBase64(str){
+    const bytes = new TextEncoder().encode(str);
+    let binary = '';
+    for (let i=0;i<bytes.length;i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  }
+
+  function randomId(){
+    return (Date.now().toString(36) + Math.random().toString(36).slice(2,6)).slice(-8);
+  }
+
+  function humanSize(n){
+    if (n < 1024) return n + ' B';
+    if (n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
+    return (n/1024/1024).toFixed(2) + ' MB';
+  }
+
+  function buildChunks(){
+    const size = parseInt(chunkSizeInput.value, 10);
+    const b64 = utf8ToBase64(rawText);
+    const fnb64 = utf8ToBase64(fileName);
+    const total = Math.ceil(b64.length / size) || 1;
+    const list = [];
+    for (let i=0;i<total;i++){
+      const part = b64.slice(i*size, (i+1)*size);
+      list.push(`QRF1:${transferId}:${i}:${total}:${fnb64}:${part}`);
+    }
+    return list;
+  }
+
+  function renderFrame(){
+    if (!chunks.length) return;
+    qrbox.innerHTML = '';
+    qr = new QRCode(qrbox, {
+      text: chunks[idx],
+      width: 280,
+      height: 280,
+      correctLevel: QRCode.CorrectLevel.L
+    });
+    curFrame.textContent = idx+1;
+    totFrame.textContent = chunks.length;
+    chunkIdLine.textContent = 'id: ' + transferId + '  ·  frame ' + (idx+1) + '/' + chunks.length;
+  }
+
+  function stepForward(){
+    idx++;
+    if (idx >= chunks.length){
+      if (loopToggle.classList.contains('on')){
+        idx = 0;
+      } else {
+        idx = chunks.length - 1;
+        pause();
+        return;
+      }
+    }
+    renderFrame();
+  }
+
+  function play(){
+    playing = true;
+    playBtn.textContent = 'Pause';
+    clearInterval(timer);
+    timer = setInterval(stepForward, parseInt(speedInput.value,10));
+  }
+  function pause(){
+    playing = false;
+    playBtn.textContent = 'Play';
+    clearInterval(timer);
+  }
+
+  function startTransfer(){
+    transferId = randomId();
+    chunks = buildChunks();
+    idx = 0;
+
+    metaName.textContent = fileName;
+    metaSize.textContent = humanSize(new Blob([rawText]).size);
+    metaChunks.textContent = chunks.length;
+    metaId.textContent = transferId;
+    meta.style.display = 'block';
+    sliderRow.style.display = 'block';
+    stage.style.display = 'flex';
+
+    renderFrame();
+    play();
+  }
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  ['dragover'].forEach(evt => dropZone.addEventListener(evt, e => {
+    e.preventDefault(); dropZone.classList.add('hover');
+  }));
+  ['dragleave','drop'].forEach(evt => dropZone.addEventListener(evt, e => {
+    e.preventDefault(); dropZone.classList.remove('hover');
+  }));
+  dropZone.addEventListener('drop', e => {
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+  fileInput.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (f) handleFile(f);
+  });
+
+  function handleFile(f){
+    const reader = new FileReader();
+    reader.onload = () => {
+      rawText = reader.result;
+      fileName = f.name;
+      startTransfer();
+    };
+    reader.readAsText(f);
+  }
+
+  chunkSizeInput.addEventListener('input', () => {
+    chunkSizeLabel.textContent = chunkSizeInput.value;
+  });
+  chunkSizeInput.addEventListener('change', () => {
+    if (!rawText) return;
+    chunks = buildChunks();
+    idx = 0;
+    renderFrame();
+  });
+  speedInput.addEventListener('input', () => {
+    speedLabel.textContent = speedInput.value;
+    if (playing){ clearInterval(timer); timer = setInterval(stepForward, parseInt(speedInput.value,10)); }
+  });
+  loopToggle.addEventListener('click', () => loopToggle.classList.toggle('on'));
+
+  playBtn.addEventListener('click', () => playing ? pause() : play());
+  prevBtn.addEventListener('click', () => {
+    pause();
+    idx = (idx - 1 + chunks.length) % chunks.length;
+    renderFrame();
+  });
+  nextBtn.addEventListener('click', () => {
+    pause();
+    idx = (idx + 1) % chunks.length;
+    renderFrame();
+  });
+  resetBtn.addEventListener('click', () => {
+    pause();
+    rawText = null;
+    fileInput.value = '';
+    meta.style.display = 'none';
+    sliderRow.style.display = 'none';
+    stage.style.display = 'none';
+  });
+})();
+</script>
+</body>
+</html>
