@@ -6,7 +6,8 @@
 <title>QR Beacon — Send</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- Replaced the ancient qrcode.js with the modern, reliable QRious library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <style>
   :root{
     --bg:#0A0D12;
@@ -129,17 +130,15 @@
     position:relative;
     z-index:2;
     box-shadow:0 0 0 1px var(--line), 0 12px 28px rgba(0,0,0,0.45);
-    display: inline-block; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   #qrbox canvas {
-    display: none !important;
-  }
-
-  #qrbox img {
-    display: block !important;
-    width: 320px !important;
-    height: 320px !important;
+    display: block;
+    width: 320px;
+    height: 320px;
     image-rendering: pixelated; 
   }
 
@@ -282,12 +281,12 @@
   <div class="slider-row" id="sliderRow">
     <div class="slider-two">
       <div>
-        <div class="slider-label"><span>Chunk size</span><b id="chunkSizeLabel">40</b></div>
-        <input type="range" id="chunkSize" min="20" max="120" step="10" value="40">
+        <div class="slider-label"><span>Chunk size</span><b id="chunkSizeLabel">60</b></div>
+        <input type="range" id="chunkSize" min="40" max="400" step="10" value="60">
       </div>
       <div>
-        <div class="slider-label"><span>Speed (ms/frame)</span><b id="speedLabel">900</b></div>
-        <input type="range" id="speed" min="150" max="1500" step="50" value="900">
+        <div class="slider-label"><span>Speed (ms/frame)</span><b id="speedLabel">600</b></div>
+        <input type="range" id="speed" min="150" max="1500" step="50" value="600">
       </div>
     </div>
     <div class="toggle-row">
@@ -380,30 +379,17 @@
   function renderFrame(){
     if (!chunks.length) return;
     
+    // Using QRious for a rock-solid, bug-free canvas render
     if (!qr) {
-      qrbox.innerHTML = '';
-      qr = new QRCode(qrbox, {
-        text: chunks[idx],
-        width: 320,
-        height: 320,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.L
+      qrbox.innerHTML = '<canvas id="qrcanvas"></canvas>';
+      qr = new QRious({
+        element: document.getElementById('qrcanvas'),
+        size: 320,
+        level: 'M',
+        value: chunks[idx]
       });
     } else {
-      try {
-        qr.makeCode(chunks[idx]);
-      } catch (e) {
-        // The qrcodejs library throws "Too long data" past ~180 chars at
-        // this correction level. If that happens, fall back to a smaller
-        // chunk size automatically so the stream keeps working.
-        console.warn('QR encode failed, shrinking chunk size', e);
-        chunkSizeInput.value = Math.max(30, parseInt(chunkSizeInput.value, 10) - 20);
-        chunkSizeLabel.textContent = chunkSizeInput.value;
-        chunks = buildChunks();
-        if (idx >= chunks.length) idx = 0;
-        qr.makeCode(chunks[idx]);
-      }
+      qr.value = chunks[idx];
     }
     
     curFrame.textContent = idx+1;
@@ -513,10 +499,7 @@
     meta.style.display = 'none';
     sliderRow.style.display = 'none';
     stage.style.display = 'none';
-    if (qr) {
-      qr.clear();
-      qr = null;
-    }
+    qr = null; 
   });
 })();
 </script>
