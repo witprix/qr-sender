@@ -121,19 +121,29 @@
     70%{transform:scale(1.06);opacity:0;}
     100%{transform:scale(1.06);opacity:0;}
   }
+  
   #qrbox{
     background:#fff;
-    padding:16px;
+    /* Massive quiet zone to ensure Apple's native scanner detects the corners */
+    padding:24px; 
     border-radius:12px;
     position:relative;
     z-index:2;
     box-shadow:0 0 0 1px var(--line), 0 12px 28px rgba(0,0,0,0.45);
+    width: 360px;
+    height: 360px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  /* Increased physical display size for easier scanning */
+  
   #qrbox img, #qrbox canvas{
     display:block;
-    width:340px !important;
-    height:340px !important;
+    width:100% !important;
+    height:auto !important;
+    /* Critical: Forces the browser to keep the QR modules razor sharp without blurring */
+    image-rendering: pixelated; 
+    image-rendering: crisp-edges;
   }
 
   .frame-counter{
@@ -276,7 +286,6 @@
     <div class="slider-two">
       <div>
         <div class="slider-label"><span>Chunk size</span><b id="chunkSizeLabel">60</b></div>
-        <!-- Reduced max and default values to prevent module density overload -->
         <input type="range" id="chunkSize" min="40" max="400" step="10" value="60">
       </div>
       <div>
@@ -375,12 +384,12 @@
     if (!chunks.length) return;
     qrbox.innerHTML = '';
     
-    // Generate code matching exact visual output dimensions (340px) 
-    // Reverted to CorrectLevel L to keep module size as large as possible
+    // Render an excessively large QR code internally to prevent sub-pixel blurring,
+    // then let CSS scale it down cleanly.
     qr = new QRCode(qrbox, {
       text: chunks[idx],
-      width: 340,
-      height: 340,
+      width: 1024,
+      height: 1024,
       correctLevel: QRCode.CorrectLevel.L
     });
     
