@@ -124,24 +124,19 @@
   
   #qrbox{
     background:#fff;
-    /* Massive quiet zone to ensure Apple's native scanner detects the corners */
+    /* Generous quiet zone so native cameras easily isolate the code */
     padding:24px; 
     border-radius:12px;
     position:relative;
     z-index:2;
     box-shadow:0 0 0 1px var(--line), 0 12px 28px rgba(0,0,0,0.45);
-    width: 360px;
-    height: 360px;
     display: flex;
     align-items: center;
     justify-content: center;
   }
   
-  #qrbox img, #qrbox canvas{
-    display:block;
-    width:100% !important;
-    height:auto !important;
-    /* Critical: Forces the browser to keep the QR modules razor sharp without blurring */
+  /* Removed the !important display rules that forced the hidden canvas to render */
+  #qrbox img, #qrbox canvas {
     image-rendering: pixelated; 
     image-rendering: crisp-edges;
   }
@@ -384,12 +379,11 @@
     if (!chunks.length) return;
     qrbox.innerHTML = '';
     
-    // Render an excessively large QR code internally to prevent sub-pixel blurring,
-    // then let CSS scale it down cleanly.
+    // Render at exactly the right visual size without CSS stretching conflicts
     qr = new QRCode(qrbox, {
       text: chunks[idx],
-      width: 1024,
-      height: 1024,
+      width: 320,
+      height: 320,
       correctLevel: QRCode.CorrectLevel.L
     });
     
