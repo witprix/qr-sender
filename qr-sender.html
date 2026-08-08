@@ -123,22 +123,27 @@
   }
   
   #qrbox{
-    background:#fff;
-    /* Generous quiet zone so native cameras easily isolate the code */
+    background:#ffffff;
     padding:24px; 
     border-radius:12px;
     position:relative;
     z-index:2;
     box-shadow:0 0 0 1px var(--line), 0 12px 28px rgba(0,0,0,0.45);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    /* Shrinks the container to exactly fit the image + padding to prevent squishing */
+    display: inline-block; 
   }
   
-  /* Removed the !important display rules that forced the hidden canvas to render */
-  #qrbox img, #qrbox canvas {
+  #qrbox canvas {
+    /* CRITICAL FIX: Hide the duplicate canvas element so it doesn't double-stack */
+    display: none !important;
+  }
+
+  #qrbox img {
+    /* Only show the generated image */
+    display: block !important;
+    width: 320px !important;
+    height: 320px !important;
     image-rendering: pixelated; 
-    image-rendering: crisp-edges;
   }
 
   .frame-counter{
@@ -343,7 +348,7 @@
   let idx = 0;
   let playing = true;
   let timer = null;
-  let qr = null;
+  let qr = null; // Maintain a single instance of the QR code to stop DOM thrashing
 
   function utf8ToBase64(str){
     const bytes = new TextEncoder().encode(str);
@@ -377,15 +382,22 @@
 
   function renderFrame(){
     if (!chunks.length) return;
-    qrbox.innerHTML = '';
     
-    // Render at exactly the right visual size without CSS stretching conflicts
-    qr = new QRCode(qrbox, {
-      text: chunks[idx],
-      width: 320,
-      height: 320,
-      correctLevel: QRCode.CorrectLevel.L
-    });
+    // Create the QR element ONCE, then cleanly update it. 
+    // This stops the browser from glitching the DOM render on every frame.
+    if (!qr) {
+      qrbox.innerHTML = '';
+      qr = new QRCode(qrbox, {
+        text: chunks[idx],
+        width: 320,
+        height: 320,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } else {
+      qr.makeCode(chunks[idx]);
+    }
     
     curFrame.textContent = idx+1;
     totFrame.textContent = chunks.length;
@@ -494,6 +506,10 @@
     meta.style.display = 'none';
     sliderRow.style.display = 'none';
     stage.style.display = 'none';
+    if (qr) {
+      qr.clear();
+      qr = null;
+    }
   });
 })();
 </script>
